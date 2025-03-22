@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
       date: new Date().toISOString(),
       message: 'Revalidation triggered successfully'
     });
-  } catch (err) {
+  } catch (_) {
+    // 使用下划线表示未使用的参数
     return NextResponse.json(
       { error: 'Error revalidating paths' },
       { status: 500 }
