@@ -1,24 +1,6 @@
 import { createClient } from 'contentful';
 import { Document } from '@contentful/rich-text-types';
 
-// 定义 Contentful 内容类型的接口
-interface BlogPostFields {
-  title: string;
-  url: string;
-  summary: string;
-  content: Document;
-  author: string;
-  date: string;
-  featuredImage?: {
-    fields: {
-      file: {
-        url: string;
-      };
-      title: string;
-    };
-  };
-}
-
 export const client = createClient({
   space: process.env.CONTENTFUL_SPACE_ID || '',
   accessToken: process.env.CONTENTFUL_ACCESS_TOKEN || '',
@@ -28,7 +10,7 @@ export type BlogPost = {
   title: string;
   url: string;
   summary: string;
-  content: Document;
+  content: any; // 使用 any 类型，避免类型兼容性问题
   author: string;
   date: string;
   featuredImage: {
@@ -36,6 +18,26 @@ export type BlogPost = {
     title: string;
   } | null;
 };
+
+// 定义 Contentful 响应项的类型
+interface ContentfulEntry {
+  fields: {
+    title?: string | number;
+    url?: string | number;
+    summary?: string | number;
+    content?: any; // 使用 any 类型
+    author?: string | number;
+    date?: string | number;
+    featuredImage?: {
+      fields?: {
+        file?: {
+          url?: string;
+        };
+        title?: string | number;
+      };
+    };
+  };
+}
 
 // 缓存机制，避免频繁请求 Contentful API
 const CACHE_DURATION = 60 * 60 * 1000; // 1小时
@@ -76,7 +78,7 @@ export async function getAllPosts(): Promise<BlogPost[]> {
   }
 
   // 处理文章数据
-  const posts = allItems.map((item: any) => {
+  const posts = allItems.map((item: ContentfulEntry) => {
     const fields = item.fields;
     
     return {
@@ -86,8 +88,8 @@ export async function getAllPosts(): Promise<BlogPost[]> {
       content: fields.content || {},
       author: String(fields.author || ''),
       date: String(fields.date || ''),
-      featuredImage: fields.featuredImage ? {
-        url: `https:${fields.featuredImage.fields.file.url}`,
+      featuredImage: fields.featuredImage?.fields ? {
+        url: `https:${fields.featuredImage.fields.file?.url || ''}`,
         title: String(fields.featuredImage.fields.title || ''),
       } : null,
     };
@@ -122,7 +124,7 @@ export async function getPostByUrl(url: string): Promise<BlogPost | null> {
     return null;
   }
 
-  const item: any = entries.items[0];
+  const item = entries.items[0] as ContentfulEntry;
   const fields = item.fields;
 
   const post = {
@@ -132,8 +134,8 @@ export async function getPostByUrl(url: string): Promise<BlogPost | null> {
     content: fields.content || {},
     author: String(fields.author || ''),
     date: String(fields.date || ''),
-    featuredImage: fields.featuredImage ? {
-      url: `https:${fields.featuredImage.fields.file.url}`,
+    featuredImage: fields.featuredImage?.fields ? {
+      url: `https:${fields.featuredImage.fields.file?.url || ''}`,
       title: String(fields.featuredImage.fields.title || ''),
     } : null,
   };
@@ -147,6 +149,12 @@ export async function getPostByUrl(url: string): Promise<BlogPost | null> {
 // URL缓存
 let urlCache: string[] | null = null;
 let urlCacheTime = 0;
+
+interface UrlEntry {
+  fields: {
+    url?: string | number;
+  };
+}
 
 export async function getAllPostUrls(): Promise<string[]> {
   const now = Date.now();
@@ -180,7 +188,7 @@ export async function getAllPostUrls(): Promise<string[]> {
     skip += 1000;
   }
   
-  const urls = allItems.map((item: any) => String(item.fields.url || ''));
+  const urls = allItems.map((item: UrlEntry) => String(item.fields.url || ''));
   
   // 更新缓存
   urlCache = urls;
