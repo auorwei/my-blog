@@ -2,11 +2,25 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getAllPosts } from '@/lib/contentful';
 
-// 启用 ISR
-export const revalidate = 60; // 每分钟重新验证一次
+// 增加缓存时间，减少重新生成次数
+export const revalidate = 3600; // 每小时重新验证一次
 
-export default async function Home() {
-  const posts = await getAllPosts();
+// 添加分页搜索参数
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { page?: string };
+}) {
+  const currentPage = Number(searchParams.page) || 1;
+  const postsPerPage = 10; // 每页显示 10 篇文章
+  
+  const allPosts = await getAllPosts();
+  
+  // 实现分页
+  const startIndex = (currentPage - 1) * postsPerPage;
+  const endIndex = startIndex + postsPerPage;
+  const posts = allPosts.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(allPosts.length / postsPerPage);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -48,6 +62,43 @@ export default async function Home() {
           <p className="text-center col-span-2 py-12">暂无博客文章，请在 Contentful 中添加内容。</p>
         )}
       </div>
+      
+      {/* 分页导航 */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-10 space-x-2">
+          {currentPage > 1 && (
+            <Link
+              href={`/?page=${currentPage - 1}`}
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
+            >
+              上一页
+            </Link>
+          )}
+          
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <Link
+              key={page}
+              href={`/?page=${page}`}
+              className={`px-4 py-2 rounded ${
+                currentPage === page
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+              }`}
+            >
+              {page}
+            </Link>
+          ))}
+          
+          {currentPage < totalPages && (
+            <Link
+              href={`/?page=${currentPage + 1}`}
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
+            >
+              下一页
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

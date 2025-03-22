@@ -4,14 +4,16 @@ import { notFound } from 'next/navigation';
 import { getPostByUrl, getAllPostUrls } from '@/lib/contentful';
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer';
 
-// 启用 ISR
-export const revalidate = 60; // 每分钟重新验证一次
+// 优化 ISR 设置，增加缓存时间
+export const revalidate = 3600; // 每小时重新验证一次，而不是每分钟
 
-// 生成静态页面路径
+// 只生成最近的文章路径，而不是所有文章
 export async function generateStaticParams() {
   const urls = await getAllPostUrls();
   
-  return urls.map((url: string) => ({
+  // 只为最近的 20 篇文章预生成静态页面
+  // 其他页面将在首次访问时按需生成
+  return urls.slice(0, 20).map((url: string) => ({
     url,
   }));
 }
