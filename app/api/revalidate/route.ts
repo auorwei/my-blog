@@ -1,7 +1,36 @@
 import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
-// 限制此 API 路由只能通过 Vercel Cron 或 Contentful webhook 调用
+// 支持 GET（用于 Vercel Cron）和 POST（用于 Contentful Webhook）请求
+export async function POST(request: NextRequest) {
+  const secret = request.nextUrl.searchParams.get('secret');
+  
+  // 验证密钥
+  if (secret !== process.env.REVALIDATE_SECRET) {
+    return NextResponse.json(
+      { error: 'Invalid token' },
+      { status: 401 }
+    );
+  }
+
+  try {
+    // 重新验证所有可能的路径
+    revalidatePath('/', 'layout'); // 使用 'layout' 类型来重新验证整个应用
+    
+    return NextResponse.json({
+      revalidated: true,
+      date: new Date().toISOString(),
+      message: 'Revalidation triggered successfully'
+    });
+  } catch (_) {
+    return NextResponse.json(
+      { error: 'Error revalidating' },
+      { status: 500 }
+    );
+  }
+}
+
+// 保持 GET 方法用于 Vercel Cron
 export async function GET(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get('secret');
   const vercelCron = request.headers.get('x-vercel-cron');
@@ -17,9 +46,8 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    // 重新验证首页和博客列表
-    revalidatePath('/');
-    revalidatePath('/blog/[url]');
+    // 重新验证所有可能的路径
+    revalidatePath('/', 'layout'); // 使用 'layout' 类型来重新验证整个应用
     
     return NextResponse.json({
       revalidated: true,
@@ -27,9 +55,8 @@ export async function GET(request: NextRequest) {
       message: 'Revalidation triggered successfully'
     });
   } catch (_) {
-    // 使用下划线表示未使用的参数
     return NextResponse.json(
-      { error: 'Error revalidating paths' },
+      { error: 'Error revalidating' },
       { status: 500 }
     );
   }

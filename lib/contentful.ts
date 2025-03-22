@@ -40,7 +40,7 @@ interface ContentfulEntry {
 }
 
 // 缓存机制，避免频繁请求 Contentful API
-const CACHE_DURATION = 60 * 60 * 1000; // 1小时
+const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 let cachedPosts: BlogPost[] | null = null;
 let lastFetchTime = 0;
 
